@@ -11,19 +11,35 @@ const JuniorStroop = ({ level, onComplete, sfx }) => {
     const match = Math.random() > 0.5;
     return { txt, visual: match ? txt.c : (txt.v===col.v ? cols.find(x=>x.v!==txt.v).c : col.c), match };
   });
+  
   const { submit, getStyle, isLocked } = useGameLogic(onComplete);
   const [bar, setBar] = useState(100);
+
   useEffect(() => {
     const decay = 1.0 + (level * 0.15);
     const t = setInterval(() => {
+      // CORRECCIÓN CRÍTICA: Si ya está bloqueado, no hacemos nada
       if (isLocked) return;
-      setBar(b => {
-        if(b<=0) { sfx('lose'); onComplete(false); return 0; }
-        return b - decay;
+
+      setBar(prevBar => {
+        // Si la barra ya está en 0, no volvemos a llamar a perder.
+        // Esto evita que se resten múltiples vidas.
+        if (prevBar <= 0) return 0;
+
+        const newValue = prevBar - decay;
+        
+        // Solo si cruzamos de positivo a negativo/cero, llamamos a perder
+        if(newValue <= 0) { 
+            sfx('lose'); 
+            onComplete(false); 
+            return 0; 
+        }
+        return newValue;
       });
     }, 50);
     return () => clearInterval(t);
   }, [isLocked, level, sfx, onComplete]);
+
   return (
     <div className="w-full max-w-md flex flex-col items-center animate-pop-in">
       <div className="w-full h-3 bg-slate-100 rounded-full mb-8 overflow-hidden"><div className="h-full bg-indigo-500 transition-all duration-100 linear" style={{width: `${bar}%`}}/></div>

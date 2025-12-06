@@ -14,16 +14,31 @@ const JuniorEmotions = ({ level, onComplete, sfx }) => {
     opts.push(tgt); opts.sort(()=>Math.random()-.5);
     return { tgt, opts };
   });
+
   const { submit, getStyle, isLocked } = useGameLogic(onComplete);
   const [bar, setBar] = useState(100);
+
   useEffect(() => {
     const decay = 1.0 + (level * 0.1);
     const t = setInterval(() => {
+      // CORRECCIÓN CRÍTICA:
       if (isLocked) return;
-      setBar(b => { if(b<=0) { sfx('lose'); onComplete(false); return 0; } return b - decay; });
+
+      setBar(prevBar => {
+        if (prevBar <= 0) return 0; // Si ya es 0, detener.
+
+        const newValue = prevBar - decay;
+        if(newValue <= 0) { 
+            sfx('lose'); 
+            onComplete(false); 
+            return 0; 
+        } 
+        return newValue; 
+      });
     }, 50);
     return () => clearInterval(t);
   }, [isLocked, level, sfx, onComplete]);
+
   return (
     <div className="w-full max-w-md animate-pop-in">
       <div className="w-full h-3 bg-slate-100 rounded-full mb-8 overflow-hidden"><div className="h-full bg-rose-500 transition-all duration-100 linear" style={{width: `${bar}%`}}/></div>

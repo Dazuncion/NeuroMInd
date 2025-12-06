@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Brain, Rocket, Baby, Gamepad2, Volume2, VolumeX, LogOut, Heart, User, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Brain, Rocket, Baby, Gamepad2, Volume2, VolumeX, LogOut, Heart, User, Check, AlertCircle, Cloud, WifiOff, Star } from 'lucide-react'; // <--- CAMBIO: Agregué iconos nuevos (Cloud, WifiOff, Star)
 
 // Imports de Componentes y Hooks
 import GlobalStyles from './components/GlobalStyles';
@@ -8,6 +8,7 @@ import Onboarding from './components/Onboarding';
 import Hub from './components/Hub';
 import GameWrapper from './components/GameWrapper';
 import DevGameWrapper from './components/DevGameWrapper';
+import useCloudSync from './hooks/useCloudSync'; // <--- CAMBIO: Importamos el Hook
 
 export default function App() {
   const [profile, setProfile] = useState(null);
@@ -21,12 +22,25 @@ export default function App() {
   const [toast, setToast] = useState(null);
   
   const { playTone, sfx } = useAudio(audioEnabled);
-  const [stats, setStats] = useState({ 
+
+  // <--- CAMBIO 1: Inicialización de stats mejorada (Carga lo guardado en el celular)
+  const [stats, setStats] = useState(() => {
+    const saved = localStorage.getItem('neuromind_stats');
+    return saved ? JSON.parse(saved) : { 
       score: 0, 
       lives: 3, 
       levels: { attention: 1, memory: 1, logic: 1, emotions: 1 }, 
       xp: { attention: 0, memory: 0, logic: 0, emotions: 0 } 
+    };
   });
+
+  // <--- CAMBIO 2: Hook de Sincronización (Debe ir DESPUÉS de definir 'stats')
+  const { isPremium, isOnline } = useCloudSync(playerName, stats);
+
+  // <--- CAMBIO 3: Efecto para guardar en el celular (localStorage) cada vez que 'stats' cambia
+  useEffect(() => {
+    localStorage.setItem('neuromind_stats', JSON.stringify(stats));
+  }, [stats]);
 
   useEffect(() => {
     if(playerName) localStorage.setItem('neuromind_player', playerName);
@@ -84,7 +98,26 @@ export default function App() {
         <div className={`p-2 rounded-xl shadow-sm ${profile === 'kids' ? 'bg-orange-400' : 'bg-indigo-600'} text-white`}><Brain size={20} /></div>
         <span className={`font-bold text-lg ${profile === 'kids' ? 'hidden' : 'block font-tech'}`}>NeuroMind</span>
       </div>
+      
+      {/* <--- CAMBIO 4: Indicadores visuales de estado (Online/Premium) */}
       <div className="flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2 mr-2">
+          {isOnline ? (
+            <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+              <Cloud size={12} /> EN LÍNEA
+            </span>
+          ) : (
+             <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full border border-slate-200">
+              <WifiOff size={12} /> OFFLINE
+            </span>
+          )}
+          {isPremium && (
+            <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-100 animate-pulse">
+              <Star size={12} fill="currentColor" /> PREMIUM
+            </span>
+          )}
+        </div>
+
         <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-full border shadow-sm">
           <User size={14} className="text-slate-400"/>
           <span className="text-xs font-bold text-slate-600 truncate max-w-[80px]">{playerName || 'Invitado'}</span>
