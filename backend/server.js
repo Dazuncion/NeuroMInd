@@ -1,77 +1,80 @@
+require('dotenv').config(); // Importante: Variables de entorno
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const User = require('./models/User');
-const { analyzeProfile } = require('./utils/PsychologyEngine'); // <--- Importamos el motor
+const { analyzeProfile } = require('./utils/PsychologyEngine');
 
 const app = express();
 app.use(express.json());
-app.use(cors()); 
+app.use(cors());
 
-mongoose.connect('mongodb://localhost:27017/neuromind_db')
+// Conexión a Base de Datos (Segura)
+// Usa process.env.MONGO_URI si está disponible, si no, usa localhost
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/neuromind_db')
   .then(() => console.log('🟢 Base de Datos Conectada'))
   .catch(err => console.error('🔴 Error de DB:', err));
 
-// --- RUTAS DE LA API ---
+// --- RUTAS ---
 
-// 1. SINCRONIZACIÓN HÍBRIDA (Offline -> Online)
+// 1. SINCRONIZACIÓN (Login/Sync)
 app.post('/api/sync', async (req, res) => {
-  // Ahora recibimos authId (Google) y performanceHistory
   const { authId, email, nickname, stats, performanceHistory, schoolId } = req.body;
-
   try {
-    // Buscamos usuario por ID de Google (authId) O por Email
-    // Nota: Si es un usuario nuevo anónimo, no tendrá authId aún, se manejará en el frontend
-    if (!authId && !email) return res.status(400).json({msg: "Se requiere identificación para sincronizar nube"});
+    if (!authId && !email) return res.status(400).json({msg: "Identificación requerida"});
 
     let user = await User.findOne({ $or: [{ authId }, { email }] });
 
     if (!user) {
-      // CREAR: Primer sync de este usuario en la nube
       user = new User({ authId, email, nickname, stats, schoolId, performanceHistory });
     } else {
-      // ACTUALIZAR (MERGE): 
-      // Si el celular tiene más puntaje que la nube, actualizamos la nube
-      if (stats.score > user.stats.score) {
-         user.stats = stats;
+      // Merge inteligente de stats
+      user.stats.score = Math.max(user.stats.score, stats.score || 0);
+      ['attention', 'memory', 'logic', 'emotions'].forEach(skill => {
+          user.stats.levels[skill] = Math.max(user.stats.levels[skill] || 1, stats.levels[skill] || 1);
+          user.stats.xp[skill] = Math.max(user.stats.xp[skill] || 0, stats.xp[skill] || 0);
+      });
+      
+      // Merge de historial sin duplicados
+      if(performanceHistory?.length > 0) {
+         const existingIds = new Set(user.performanceHistory.map(h => h.gameId + new Date(h.date).getTime()));
+         const newUnique = performanceHistory.filter(h => !existingIds.has(h.gameId + new Date(h.date).getTime()));
+         user.performanceHistory.push(...newUnique);
       }
-      // Siempre añadimos el historial nuevo de partidas
-      if(performanceHistory && performanceHistory.length > 0) {
-         // (En una app real, aquí filtrarías para no duplicar partidas por ID)
-         user.performanceHistory.push(...performanceHistory);
-      }
-      // Actualizamos escuela si cambió
       if(schoolId) user.schoolId = schoolId;
     }
     
     user.lastSync = new Date();
     await user.save();
-    
-    // Devolvemos el estado premium para desbloquear funciones en la App
     res.json({ status: 'synced', isPremium: user.isPremium });
-    
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// 2. REPORTE CIENTÍFICO (SOLO PREMIUM)
+// 2. REPORTE CIENTÍFICO (CON MUESTRA GRATUITA)
 app.get('/api/report/:authId', async (req, res) => {
   try {
     const user = await User.findOne({ authId: req.params.authId });
     if (!user) return res.status(404).json({ msg: 'Usuario no encontrado' });
+
+    // Generamos el análisis SIEMPRE (para tener datos de muestra)
+    const scientificAnalysis = analyzeProfile(user);
     
-    // CANDADO DE SEGURIDAD PREMIUM
+    // Si NO es Premium, enviamos error 403 pero CON la muestra (preview)
     if (!user.isPremium) {
         return res.status(403).json({ 
-            msg: "Reporte Bloqueado",
-            preview: "¡Tienes datos interesantes! Tu velocidad de procesamiento es alta. Hazte Premium para ver el análisis completo."
+            msg: "Reporte Completo Bloqueado",
+            preview: {
+                summary: scientificAnalysis.summary, // El resumen real del usuario
+                strengths_count: scientificAnalysis.strengths.length,
+                areas_count: scientificAnalysis.areas_of_support.length
+            }
         });
     }
 
-    // Generar análisis con el motor
-    const scientificAnalysis = analyzeProfile(user);
+    // Si ES Premium, enviamos todo el reporte
     res.json({ stats: user.stats, analysis: scientificAnalysis });
 
   } catch (error) {
@@ -79,5 +82,5 @@ app.get('/api/report/:authId', async (req, res) => {
   }
 });
 
-const PORT = 5000;
-app.listen(PORT, () => console.log(`🚀 Servidor NeuroMind 2.0 corriendo en puerto ${PORT}`));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Servidor NeuroMint corriendo en puerto ${PORT}`));

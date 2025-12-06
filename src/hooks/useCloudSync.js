@@ -25,17 +25,14 @@ export default function useCloudSync(playerName, stats) {
     if (!isOnline) return;
 
     // A. OBTENER IDENTIDAD (Google/Firebase)
-    // Suponemos que un componente de Login guardó esto en localStorage
     const authData = JSON.parse(localStorage.getItem('auth_data') || 'null');
     
     // Si no hay login (es un usuario anónimo offline), no sincronizamos con la nube
     if (!authData || !authData.uid) {
-        console.log("ℹ️ Jugador anónimo (Local): No se sincroniza con la nube.");
         return;
     }
 
     // B. OBTENER HISTORIAL PENDIENTE (Cola de partidas offline)
-    // App.js debe ir guardando aquí cada vez que termina un juego
     const pendingHistory = JSON.parse(localStorage.getItem('neuromind_pending_history') || '[]');
 
     try {
@@ -61,10 +58,20 @@ export default function useCloudSync(playerName, stats) {
             localStorage.setItem('is_premium', 'true');
         }
 
-        // 2. Limpiar la cola de historial (ya se subió exitosamente)
-        localStorage.setItem('neuromind_pending_history', '[]');
+        // --- CORRECCIÓN CRÍTICA DE INTEGRIDAD ---
+        // Volvemos a leer el localStorage por si el usuario jugó MIENTRAS se enviaban los datos.
+        const currentQueue = JSON.parse(localStorage.getItem('neuromind_pending_history') || '[]');
+        
+        // Eliminamos de la cola SOLO la cantidad de partidas que acabamos de enviar con éxito.
+        // Si pendingHistory tenía 5 elementos, cortamos los primeros 5.
+        // Si el usuario generó 2 nuevos mientras tanto, esos 2 se quedan seguros en la cola.
+        const remainingQueue = currentQueue.slice(pendingHistory.length);
+        
+        localStorage.setItem('neuromind_pending_history', JSON.stringify(remainingQueue));
+        // ----------------------------------------
+
         setUnsavedChanges(false);
-        console.log(`☁️ Sincronizado: ${pendingHistory.length} partidas subidas.`);
+        console.log(`☁️ Sincronizado: ${pendingHistory.length} partidas subidas. Pendientes: ${remainingQueue.length}`);
       }
     } catch (error) {
       console.error("⚠️ Error subiendo datos:", error);
@@ -77,8 +84,6 @@ export default function useCloudSync(playerName, stats) {
     if (!isOnline || !authData) return null;
 
     try {
-      // Usamos el endpoint de reporte o sync para recuperar (depende de tu server)
-      // Aquí simulamos que pedimos el perfil asociado al ID
       const response = await fetch(`${API_URL}/api/report/${authData.uid}`); 
       
       if (response.ok) {

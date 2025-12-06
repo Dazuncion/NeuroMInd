@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Eye, Zap, Shapes, Smile, Target, Grid, Calculator, HeartHandshake, Wind, LayoutGrid, Map, Puzzle, Play, Medal, ArrowLeft, FlaskConical } from 'lucide-react';
+import { Eye, Zap, Shapes, Smile, Target, Grid, Calculator, HeartHandshake, Wind, LayoutGrid, Map, Puzzle, Play, Medal, ArrowLeft, FlaskConical, FileText, Lock } from 'lucide-react';
 
-const Hub = ({ profile, stats, onPlay, onPlayDev, onPlayExp, lb }) => {
+const Hub = ({ profile, stats, onPlay, onPlayDev, onPlayExp, lb, isOnline, isPremium, onReport }) => {
+  
   const assets = {
     kids: { attention: {title:"Ojo de Águila", icon:Eye, color:"orange"}, memory:{title:"Eco de Luces", icon:Zap, color:"purple"}, logic:{title:"Clasificador", icon:Shapes, color:"blue"}, emotions:{title:"Caras y Gestos", icon:Smile, color:"pink"} },
     juniors: { attention:{title:"Control Maestro", icon:Target, color:"indigo"}, memory:{title:"Matrix", icon:Grid, color:"cyan"}, logic:{title:"Calculadora", icon:Calculator, color:"emerald"}, emotions:{title:"Radar Emocional", icon:HeartHandshake, color:"rose"} }
   }[profile];
+  
   const isKids = profile === 'kids';
   const [showLb, setShowLb] = useState(false);
   const [selectedDevGame, setSelectedDevGame] = useState(null);
@@ -37,8 +39,23 @@ const Hub = ({ profile, stats, onPlay, onPlayDev, onPlayExp, lb }) => {
       <div className="flex-1 overflow-y-auto p-6 pb-24 animate-slide-up flex flex-col">
         <div className="flex justify-between items-end mb-6">
             <h2 className={`text-3xl font-black ${isKids ? 'text-orange-900' : 'text-slate-800 font-tech'}`}>{isKids ? '¡A Jugar!' : 'Centro de Mando'}</h2>
-            <button onClick={() => setShowLb(true)} className="text-indigo-500 font-bold text-xs flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-full"><Medal size={14}/> Ranking</button>
+            
+            <div className="flex gap-2">
+                {/* --- BOTÓN REPORTE (SOLO ONLINE) --- */}
+                {isOnline && (
+                    <button 
+                        onClick={onReport} 
+                        className={`font-bold text-xs flex items-center gap-1 px-3 py-1 rounded-full border transition-all active:scale-95 ${isPremium ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-slate-500 bg-slate-100 border-slate-200'}`}
+                    >
+                        {/* El icono cambia (Candado/Archivo), pero el texto es SIEMPRE "Reporte" */}
+                        {isPremium ? <FileText size={14}/> : <Lock size={14}/>} 
+                        Reporte
+                    </button>
+                )}
+                <button onClick={() => setShowLb(true)} className="text-indigo-500 font-bold text-xs flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-full"><Medal size={14}/> Ranking</button>
+            </div>
         </div>
+
         <div className={`grid ${isKids ? 'grid-cols-1' : 'grid-cols-2'} gap-4 mb-8`}>
             {Object.entries(assets).map(([key, data]) => (
                 <button key={key} onClick={() => onPlay(key)} className={`p-5 text-left w-full relative overflow-hidden transition active:scale-95 bg-white border-b-4 rounded-2xl shadow-sm ${isKids ? 'border-orange-200' : 'border-slate-200'}`}>
