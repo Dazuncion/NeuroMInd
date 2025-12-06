@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Brain, Rocket, Baby, Gamepad2, Volume2, VolumeX, LogOut, Heart, User, Check, AlertCircle, Cloud, WifiOff, Star } from 'lucide-react'; // <--- CAMBIO: Agregué iconos nuevos (Cloud, WifiOff, Star)
+import { ArrowLeft, Brain, Rocket, Baby, Gamepad2, Volume2, VolumeX, LogOut, Heart, User, Check, AlertCircle, Cloud, WifiOff, Star } from 'lucide-react'; 
 
 // Imports de Componentes y Hooks
 import GlobalStyles from './components/GlobalStyles';
@@ -8,7 +8,7 @@ import Onboarding from './components/Onboarding';
 import Hub from './components/Hub';
 import GameWrapper from './components/GameWrapper';
 import DevGameWrapper from './components/DevGameWrapper';
-import useCloudSync from './hooks/useCloudSync'; // <--- CAMBIO: Importamos el Hook
+import useCloudSync from './hooks/useCloudSync'; 
 
 export default function App() {
   const [profile, setProfile] = useState(null);
@@ -23,7 +23,7 @@ export default function App() {
   
   const { playTone, sfx } = useAudio(audioEnabled);
 
-  // <--- CAMBIO 1: Inicialización de stats mejorada (Carga lo guardado en el celular)
+  // Inicialización de stats (Carga lo guardado en el celular)
   const [stats, setStats] = useState(() => {
     const saved = localStorage.getItem('neuromind_stats');
     return saved ? JSON.parse(saved) : { 
@@ -34,10 +34,10 @@ export default function App() {
     };
   });
 
-  // <--- CAMBIO 2: Hook de Sincronización (Debe ir DESPUÉS de definir 'stats')
+  // Hook de Sincronización
   const { isPremium, isOnline } = useCloudSync(playerName, stats);
 
-  // <--- CAMBIO 3: Efecto para guardar en el celular (localStorage) cada vez que 'stats' cambia
+  // Efecto para guardar en el celular (localStorage) cada vez que 'stats' cambia
   useEffect(() => {
     localStorage.setItem('neuromind_stats', JSON.stringify(stats));
   }, [stats]);
@@ -65,7 +65,30 @@ export default function App() {
   const startDevGame = (gameId, diff) => { sfx('pop'); setDevMode({gameId, difficulty: diff}); setActiveGame(null); setView('devGame'); };
   const startExp = () => { sfx('pop'); setActiveGame('experimental'); setDevMode(null); setView('game'); };
 
-  const handleProgress = (gameId, amount, isWin) => {
+  // --- CAMBIO CLAVE AQUÍ: Agregamos el parámetro 'metrics' ---
+  const handleProgress = (gameId, amount, isWin, metrics = {}) => {
+    
+    // 1. LÓGICA CIENTÍFICA: Guardar la partida para el análisis psicológico
+    // Esto crea el historial que luego se subirá a la nube
+    const sessionData = {
+        gameId: gameId,
+        date: new Date(),
+        score: amount,
+        metrics: {
+            reactionTime: metrics.avgTime || 0, // Importante para detectar TDAH (velocidad)
+            errors: metrics.errorCount || 0,    // Importante para detectar Impulsividad
+            omissions: metrics.omissions || 0,
+            levelPlayed: stats.levels[gameId] || 1
+        }
+    };
+
+    // Guardamos en la "Cola de Envío" local
+    const currentQueue = JSON.parse(localStorage.getItem('neuromind_pending_history') || '[]');
+    currentQueue.push(sessionData);
+    localStorage.setItem('neuromind_pending_history', JSON.stringify(currentQueue));
+
+
+    // 2. LÓGICA DE JUEGO (XP, Niveles, Vidas)
     if (gameId === 'experimental') { 
         if(!isWin) { saveScore(amount); setView('hub'); setActiveGame(null); } 
         return; 
@@ -99,7 +122,7 @@ export default function App() {
         <span className={`font-bold text-lg ${profile === 'kids' ? 'hidden' : 'block font-tech'}`}>NeuroMind</span>
       </div>
       
-      {/* <--- CAMBIO 4: Indicadores visuales de estado (Online/Premium) */}
+      {/* Indicadores visuales de estado (Online/Premium) */}
       <div className="flex items-center gap-2">
         <div className="hidden md:flex items-center gap-2 mr-2">
           {isOnline ? (

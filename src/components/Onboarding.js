@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Rocket, Baby, Gamepad2, ArrowLeft } from 'lucide-react';
+import { Rocket, Baby, Gamepad2, ArrowLeft, Lock, CloudDownload } from 'lucide-react'; // <--- CAMBIO: Iconos nuevos
 
-const Onboarding = ({ onSelect }) => {
+const Onboarding = ({ onSelect, onRestore }) => { // <--- CAMBIO: Recibimos prop onRestore
     const [step, setStep] = useState(1);
     const [tempProfile, setTempProfile] = useState(null);
     const [name, setName] = useState("");
+    const [password, setPassword] = useState(""); // <--- CAMBIO: Estado para password
    
     if (step === 1) return (
       <div className="h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-indigo-50 to-white animate-slide-up relative">
@@ -32,8 +33,32 @@ const Onboarding = ({ onSelect }) => {
       <div className="h-full flex flex-col items-center justify-center p-6 bg-white animate-slide-up">
         <div className="w-full max-w-xs">
             <h2 className="text-3xl font-black text-slate-800 mb-2">¡Hola!</h2>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Escribe tu nombre..." className="w-full bg-slate-100 p-5 rounded-2xl font-bold text-slate-800 outline-none focus:ring-4 ring-indigo-100 mb-6 text-lg border border-slate-200" autoFocus />
-            <button onClick={() => onSelect(tempProfile, name || "Jugador")} className="w-full py-5 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl hover:bg-indigo-700 transition active:scale-95 flex items-center justify-center gap-2"><span>Comenzar Aventura</span> <ArrowLeft className="rotate-180" size={20}/></button>
+            
+            {/* Input Nombre */}
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Escribe tu nombre..." className="w-full bg-slate-100 p-5 rounded-2xl font-bold text-slate-800 outline-none focus:ring-4 ring-indigo-100 mb-4 text-lg border border-slate-200" autoFocus />
+            
+            {/* Input Password (NUEVO - FASE 4) */}
+            <div className="relative mb-6">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Lock size={20} />
+                </div>
+                <input 
+                    type="password" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    placeholder="Contraseña (Opcional)" 
+                    className="w-full bg-slate-50 p-5 pl-12 rounded-2xl font-bold text-slate-800 outline-none focus:ring-4 ring-indigo-100 border border-slate-200" 
+                />
+            </div>
+
+            {/* Botón Comenzar (Pasa password a App.js) */}
+            <button onClick={() => onSelect(tempProfile, name || "Jugador", password)} className="w-full py-5 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl hover:bg-indigo-700 transition active:scale-95 flex items-center justify-center gap-2"><span>Comenzar Aventura</span> <ArrowLeft className="rotate-180" size={20}/></button>
+            
+            {/* Botón Restaurar (NUEVO - FASE 4) */}
+            <button onClick={() => onRestore && onRestore(name, password)} className="mt-4 w-full py-3 bg-white border-2 border-indigo-100 text-indigo-600 font-bold rounded-2xl hover:bg-indigo-50 transition active:scale-95 flex items-center justify-center gap-2">
+                <CloudDownload size={20}/> <span>Restaurar Progreso</span>
+            </button>
+
             <button onClick={() => setStep(1)} className="mt-6 text-slate-400 font-bold text-sm w-full py-2">Volver atrás</button>
         </div>
       </div>
