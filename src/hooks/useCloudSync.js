@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 
-// Ajusta a tu URL real o localhost
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000'; 
+// ✅ URL DE PRODUCCIÓN (RENDER)
+const API_URL = 'https://neuromind-api.onrender.com'; 
 
 export default function useCloudSync(playerName, stats) {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [isPremium, setIsPremium] = useState(false);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
 
   // 1. Detectar estado de red
@@ -20,105 +19,77 @@ export default function useCloudSync(playerName, stats) {
     };
   }, []);
 
-  // 2. Función Principal: Sincronizar (Subir datos + Historial)
-  const syncNow = useCallback(async () => {
-    if (!isOnline) return;
+  // 2. Función Principal: Sincronizar
+  // Acepta 'latestStats' opcional para guardar inmediatamente después de jugar
+  const syncNow = useCallback(async (latestStats = null) => {
+    if (!navigator.onLine) return; 
 
-    // A. OBTENER IDENTIDAD (Google/Firebase)
     const authData = JSON.parse(localStorage.getItem('auth_data') || 'null');
-    
-    // Si no hay login (es un usuario anónimo offline), no sincronizamos con la nube
-    if (!authData || !authData.uid) {
-        return;
-    }
+    if (!authData || !authData.uid) return;
 
-    // B. OBTENER HISTORIAL PENDIENTE (Cola de partidas offline)
     const pendingHistory = JSON.parse(localStorage.getItem('neuromind_pending_history') || '[]');
 
     try {
+      console.log("☁️ Enviando datos a:", API_URL); 
+      
       const response = await fetch(`${API_URL}/api/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          authId: authData.uid,      // ID Seguro de Google
+          authId: authData.uid,
           email: authData.email,
           nickname: playerName,
-          stats: stats,              // Puntajes acumulados
+          // Enviamos los stats más recientes si existen, si no, los del estado actual
+          stats: latestStats || stats, 
           schoolId: localStorage.getItem('school_id') || null,
-          performanceHistory: pendingHistory // <--- EL DATO CIENTÍFICO CLAVE
+          performanceHistory: pendingHistory
         })
       });
       
       if (response.ok) {
-        const data = await response.json();
-        
-        // 1. Actualizar estado Premium
-        if (data.isPremium) {
-            setIsPremium(true);
-            localStorage.setItem('is_premium', 'true');
-        }
-
-        // --- CORRECCIÓN CRÍTICA DE INTEGRIDAD ---
-        // Volvemos a leer el localStorage por si el usuario jugó MIENTRAS se enviaban los datos.
+        // Limpiamos la cola de partidas enviadas
         const currentQueue = JSON.parse(localStorage.getItem('neuromind_pending_history') || '[]');
-        
-        // Eliminamos de la cola SOLO la cantidad de partidas que acabamos de enviar con éxito.
-        // Si pendingHistory tenía 5 elementos, cortamos los primeros 5.
-        // Si el usuario generó 2 nuevos mientras tanto, esos 2 se quedan seguros en la cola.
         const remainingQueue = currentQueue.slice(pendingHistory.length);
-        
         localStorage.setItem('neuromind_pending_history', JSON.stringify(remainingQueue));
-        // ----------------------------------------
 
         setUnsavedChanges(false);
-        console.log(`☁️ Sincronizado: ${pendingHistory.length} partidas subidas. Pendientes: ${remainingQueue.length}`);
+        console.log("✅ Sincronización exitosa.");
+      } else {
+          console.error("❌ Error del servidor:", response.status);
       }
     } catch (error) {
-      console.error("⚠️ Error subiendo datos:", error);
+      console.error("⚠️ Error de conexión:", error);
     }
-  }, [isOnline, playerName, stats]);
+  }, [playerName, stats]); 
 
-  // 3. Restaurar Datos (Al iniciar sesión en dispositivo nuevo)
+  // 3. Restaurar Datos (Backup)
   const restoreFromCloud = async () => {
     const authData = JSON.parse(localStorage.getItem('auth_data') || 'null');
-    if (!isOnline || !authData) return null;
+    if (!navigator.onLine || !authData) return null;
 
     try {
       const response = await fetch(`${API_URL}/api/report/${authData.uid}`); 
-      
       if (response.ok) {
         const data = await response.json();
-        if (data.stats) {
-            console.log("📥 Datos recuperados de la nube");
-            return data.stats; 
-        }
+        if (data.stats) return data.stats; 
       }
-    } catch (error) {
-      console.error("Error recuperando datos:", error);
-    }
+    } catch (error) { console.error(error); }
     return null;
   };
 
-  // Trigger automático: Intentar subir cada 10s si hay cambios o historial pendiente
+  // Trigger automático (Backup cada 10s si hay cambios pendientes)
   useEffect(() => {
-    const checkPending = () => {
-       const pending = JSON.parse(localStorage.getItem('neuromind_pending_history') || '[]');
-       if (pending.length > 0 || unsavedChanges) {
-           syncNow();
-       }
-    };
-
     const timer = setInterval(() => {
-      if (isOnline) checkPending();
-    }, 10000); // Revisar cada 10 segundos
-
+      const pending = JSON.parse(localStorage.getItem('neuromind_pending_history') || '[]');
+      if (navigator.onLine && (pending.length > 0 || unsavedChanges)) {
+           syncNow();
+      }
+    }, 10000); 
     return () => clearInterval(timer);
-  }, [isOnline, syncNow, unsavedChanges]);
+  }, [syncNow, unsavedChanges]);
 
-  // Trigger manual al cambiar stats
-  useEffect(() => {
-      setUnsavedChanges(true);
-  }, [stats]);
+  // Marcar cambios sin guardar cuando cambian los stats
+  useEffect(() => { setUnsavedChanges(true); }, [stats]);
 
-  return { isPremium, syncNow, restoreFromCloud, isOnline };
+  return { syncNow, restoreFromCloud, isOnline };
 }

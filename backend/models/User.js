@@ -1,18 +1,15 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
-  // --- 1. IDENTIDAD HÍBRIDA ---
-  // authId: ID único de Google/Firebase. Si no existe, es un usuario offline.
-  authId: { type: String, unique: true, sparse: true }, 
-  email: { type: String, unique: true, sparse: true }, 
-  nickname: { type: String, required: true }, // El nombre visible (ej. "Juan")
+  // Identificador de Google (VITAL para tu login)
+  authId: { type: String, unique: true, required: true }, 
+  email: { type: String, default: "" }, 
+  nickname: { type: String, default: "Jugador" },
   
-  // --- 2. DATOS INSTITUCIONALES ---
-  schoolId: { type: String, default: null }, // Para agrupar alumnos de una escuela
-  isPremium: { type: Boolean, default: false }, // Switch para funciones avanzadas
+  schoolId: { type: String, default: null },
   lastSync: { type: Date, default: Date.now },
 
-  // --- 3. ESTADÍSTICAS VISIBLES 
+  // Estadísticas acumuladas (Niveles, XP, Vidas)
   stats: {
     score: { type: Number, default: 0 },
     lives: { type: Number, default: 3 },
@@ -30,16 +27,15 @@ const UserSchema = new mongoose.Schema({
     }
   },
 
-  // --- 4. NUEVO: HISTORIAL CIENTÍFICO (Para el Motor Psicológico) ---
-  // Aquí guardamos cada partida individual con sus métricas finas.
+  // Historial científico (SIN ESTO NO HAY REPORTE)
   performanceHistory: [{
-    gameId: String, // ej. 'stroop', 'maze'
-    date: { type: Date, default: Date.now },
+    gameId: String,
+    date: Date,
     metrics: {
-      reactionTime: Number, // Promedio en milisegundos (clave para TDAH)
-      errors: Number,       // Errores cometidos (clave para Impulsividad)
-      omissions: Number,    // Errores por no responder a tiempo (Inatención)
-      levelPlayed: Number   // Dificultad en la que jugó
+      reactionTime: Number,
+      errors: Number,
+      omissions: Number,
+      levelPlayed: Number
     }
   }]
 });

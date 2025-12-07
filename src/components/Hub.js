@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Eye, Zap, Shapes, Smile, Target, Grid, Calculator, HeartHandshake, Wind, LayoutGrid, Map, Puzzle, Play, Medal, ArrowLeft, FlaskConical, FileText, Lock } from 'lucide-react';
+import { Eye, Zap, Shapes, Smile, Target, Grid, Calculator, HeartHandshake, Wind, LayoutGrid, Map, Puzzle, Play, Medal, ArrowLeft, FlaskConical, FileText } from 'lucide-react';
 
-const Hub = ({ profile, stats, onPlay, onPlayDev, onPlayExp, lb, isOnline, isPremium, onReport }) => {
+const Hub = ({ profile, stats, onPlay, onPlayDev, onPlayExp, lb, isOnline, onReport }) => {
   
   const assets = {
     kids: { attention: {title:"Ojo de Águila", icon:Eye, color:"orange"}, memory:{title:"Eco de Luces", icon:Zap, color:"purple"}, logic:{title:"Clasificador", icon:Shapes, color:"blue"}, emotions:{title:"Caras y Gestos", icon:Smile, color:"pink"} },
@@ -45,11 +45,10 @@ const Hub = ({ profile, stats, onPlay, onPlayDev, onPlayExp, lb, isOnline, isPre
                 {isOnline && (
                     <button 
                         onClick={onReport} 
-                        className={`font-bold text-xs flex items-center gap-1 px-3 py-1 rounded-full border transition-all active:scale-95 ${isPremium ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-slate-500 bg-slate-100 border-slate-200'}`}
+                        className="font-bold text-xs flex items-center gap-1 px-3 py-1 rounded-full border transition-all active:scale-95 text-emerald-600 bg-emerald-50 border-emerald-100 hover:bg-emerald-100"
                     >
-                        {/* El icono cambia (Candado/Archivo), pero el texto es SIEMPRE "Reporte" */}
-                        {isPremium ? <FileText size={14}/> : <Lock size={14}/>} 
-                        Reporte
+                        <FileText size={14}/> 
+                        Reporte IA
                     </button>
                 )}
                 <button onClick={() => setShowLb(true)} className="text-indigo-500 font-bold text-xs flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-full"><Medal size={14}/> Ranking</button>

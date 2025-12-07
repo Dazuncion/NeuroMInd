@@ -7,7 +7,7 @@ const LoginGateway = ({ onLogin, onOffline }) => {
   const handleGoogleLogin = async () => {
     const user = await loginWithGoogle();
     if (user) {
-      // Pasamos el usuario a App.js para verificar Premium en el backend
+      // Pasamos el usuario a App.js
       onLogin({
         uid: user.uid,
         email: user.email,
@@ -25,7 +25,7 @@ const LoginGateway = ({ onLogin, onOffline }) => {
       </div>
 
       <div className="grid gap-6 w-full max-w-md">
-        {/* OPCIÓN 1: ONLINE / PREMIUM (Google) */}
+        {/* OPCIÓN 1: ONLINE (Google) */}
         <button 
           onClick={handleGoogleLogin}
           className="relative group bg-white p-6 rounded-3xl shadow-xl border-2 border-indigo-100 hover:border-indigo-500 transition-all text-left flex items-center gap-4"
@@ -34,10 +34,10 @@ const LoginGateway = ({ onLogin, onOffline }) => {
             <Cloud size={32} />
           </div>
           <div>
-            <h3 className="text-xl font-black text-slate-800">Modo Online / Premium</h3>
-            <p className="text-sm text-slate-500">Guardar progreso, Ranking mundial y Reportes IA.</p>
+            <h3 className="text-xl font-black text-slate-800">Acceso Educativo</h3>
+            <p className="text-sm text-slate-500">Guarda progreso, compite en Ranking y obtén Reportes IA.</p>
             <div className="flex gap-2 mt-2">
-               <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><ShieldCheck size={10}/> SIN CONTRASEÑA</span>
+               <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><ShieldCheck size={10}/> SEGURO</span>
                <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">GOOGLE</span>
             </div>
           </div>
